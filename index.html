@@ -3,14 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preço das Commodities</title>
+    <title>Preços das Commodities</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
         .chart-container {
-            width: 90%;
-            max-width: 500px;
-            height: 300px;
-            margin: auto;
+            width: 300px;
+            height: 250px;
+            margin: 20px;
+        }
+        table {
+            width: 50%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
         }
     </style>
 </head>
@@ -18,14 +39,27 @@
 
     <h1>Preços das Commodities</h1>
 
-    <!-- Contêiner do gráfico -->
-    <div class="chart-container">
-        <canvas id="commodityChart"></canvas>
+    <!-- Tabela para mostrar os preços -->
+    <table>
+        <thead>
+            <tr>
+                <th>Commodity</th>
+                <th>Preço (USD)</th>
+            </tr>
+        </thead>
+        <tbody id="commodityTableBody">
+            <!-- Preenchido via JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Contêiner para os gráficos -->
+    <div class="container" id="chartsContainer">
+        <!-- Gráficos são inseridos via JavaScript -->
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
-            // Commodities desejadas
+            // Commodities desejadas e seus links no Investing.com
             const commodities = {
                 "Gold": "https://www.investing.com/commodities/gold",
                 "Silver": "https://www.investing.com/commodities/silver",
@@ -34,8 +68,9 @@
                 "Corn": "https://www.investing.com/commodities/us-corn"
             };
 
-            let prices = [];
-            let labels = Object.keys(commodities);
+            let prices = {};
+            let tableBody = document.getElementById("commodityTableBody");
+            let chartsContainer = document.getElementById("chartsContainer");
 
             // Função para buscar o preço da commodity no Investing.com
             async function getCommodityPrice(url) {
@@ -45,7 +80,7 @@
                     let parser = new DOMParser();
                     let doc = parser.parseFromString(text, "text/html");
 
-                    // O preço geralmente está em uma tag <span> dentro de um elemento com a classe específica
+                    // O preço geralmente está dentro de uma tag <span> com classe específica
                     let priceElement = doc.querySelector(".instrument-price_last__KQzyA"); 
                     return priceElement ? parseFloat(priceElement.innerText.replace(",", "")) : null;
                 } catch (error) {
@@ -57,47 +92,58 @@
             // Buscando os preços das commodities
             for (let [name, url] of Object.entries(commodities)) {
                 let price = await getCommodityPrice(url);
-                prices.push(price || 0); // Se der erro, retorna 0
+                prices[name] = price || 0; // Se der erro, define como 0
+
+                // Adiciona dados à tabela
+                let row = document.createElement("tr");
+                row.innerHTML = `<td>${name}</td><td>${prices[name].toFixed(2)}</td>`;
+                tableBody.appendChild(row);
             }
 
             console.log("Preços das commodities:", prices);
 
-            // Criando o gráfico com Chart.js
-            const ctx = document.getElementById('commodityChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Preço em USD',
-                        data: prices,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.5)',  // Ouro
-                            'rgba(54, 162, 235, 0.5)',  // Prata
-                            'rgba(255, 206, 86, 0.5)',  // Petróleo Brent
-                            'rgba(75, 192, 192, 0.5)',  // Café
-                            'rgba(153, 102, 255, 0.5)'  // Milho
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            suggestedMin: Math.min(...prices) * 0.9,
+            // Criando gráficos individuais para cada commodity
+            Object.entries(prices).forEach(([name, price], index) => {
+                // Criando divs para os gráficos
+                let chartContainer = document.createElement("div");
+                chartContainer.className = "chart-container";
+                chartContainer.innerHTML = `<canvas id="chart${index}"></canvas>`;
+                chartsContainer.appendChild(chartContainer);
+
+                // Criando o gráfico com Chart.js
+                const ctx = document.getElementById(`chart${index}`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [name],
+                        datasets: [{
+                            label: 'Preço em USD',
+                            data: [price],
+                            backgroundColor: ['rgba(75, 192, 192, 0.5)'],
+                            borderColor: ['rgba(75, 192, 192, 1)'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                suggestedMin: price * 0.9,
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        return `Preço: $${tooltipItem.raw.toFixed(2)}`;
+                                    }
+                                }
+                            }
                         }
                     }
-                }
+                });
             });
 
         });
