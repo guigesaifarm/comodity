@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preço das Commodities</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            width: 90%;
+            max-width: 500px;
+            height: 300px;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Preços das Commodities</h1>
+
+    <!-- Contêiner do gráfico -->
+    <div class="chart-container">
+        <canvas id="commodityChart"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            // Commodities desejadas
+            const commodities = {
+                "Gold": "https://www.investing.com/commodities/gold",
+                "Silver": "https://www.investing.com/commodities/silver",
+                "Brent Oil": "https://www.investing.com/commodities/brent-oil",
+                "Coffee": "https://www.investing.com/commodities/us-coffee-c",
+                "Corn": "https://www.investing.com/commodities/us-corn"
+            };
+
+            let prices = [];
+            let labels = Object.keys(commodities);
+
+            // Função para buscar o preço da commodity no Investing.com
+            async function getCommodityPrice(url) {
+                try {
+                    let response = await fetch(url);
+                    let text = await response.text();
+                    let parser = new DOMParser();
+                    let doc = parser.parseFromString(text, "text/html");
+
+                    // O preço geralmente está em uma tag <span> dentro de um elemento com a classe específica
+                    let priceElement = doc.querySelector(".instrument-price_last__KQzyA"); 
+                    return priceElement ? parseFloat(priceElement.innerText.replace(",", "")) : null;
+                } catch (error) {
+                    console.error(`Erro ao buscar ${url}:`, error);
+                    return null;
+                }
+            }
+
+            // Buscando os preços das commodities
+            for (let [name, url] of Object.entries(commodities)) {
+                let price = await getCommodityPrice(url);
+                prices.push(price || 0); // Se der erro, retorna 0
+            }
+
+            console.log("Preços das commodities:", prices);
+
+            // Criando o gráfico com Chart.js
+            const ctx = document.getElementById('commodityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Preço em USD',
+                        data: prices,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.5)',  // Ouro
+                            'rgba(54, 162, 235, 0.5)',  // Prata
+                            'rgba(255, 206, 86, 0.5)',  // Petróleo Brent
+                            'rgba(75, 192, 192, 0.5)',  // Café
+                            'rgba(153, 102, 255, 0.5)'  // Milho
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            suggestedMin: Math.min(...prices) * 0.9,
+                        }
+                    }
+                }
+            });
+
+        });
+    </script>
+
+</body>
+</html>
