@@ -59,35 +59,33 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", async function () {
-            // Commodities desejadas e seus símbolos na TradingEconomics API
+            // Commodities desejadas e seus símbolos no Yahoo Finance
             const commodities = {
-                "Gold": "gold",
-                "Silver": "silver",
-                "Brent Oil": "brent crude oil",
-                "Coffee": "coffee",
-                "Corn": "corn"
+                "Gold": "GC=F",
+                "Silver": "SI=F",
+                "Brent Oil": "BZ=F",
+                "Coffee": "KC=F",
+                "Corn": "ZC=F"
             };
 
             let prices = {};
             let tableBody = document.getElementById("commodityTableBody");
             let chartsContainer = document.getElementById("chartsContainer");
 
-            // URL da API TradingEconomics
-            const apiUrl = "https://api.tradingeconomics.com/markets/commodities?c=guest:guest&f=json";
-
             try {
-                let response = await fetch(apiUrl);
-                let data = await response.json();
+                for (let [name, symbol] of Object.entries(commodities)) {
+                    let url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`;
+                    let response = await fetch(url);
+                    let data = await response.json();
 
-                if (!data || data.length === 0) {
-                    throw new Error("Nenhum dado recebido da API.");
+                    if (data.chart.error) {
+                        console.error(`Erro ao buscar ${name}:`, data.chart.error);
+                        prices[name] = 0;
+                    } else {
+                        let price = data.chart.result[0].meta.regularMarketPrice;
+                        prices[name] = price || 0;
+                    }
                 }
-
-                // Pegando preços das commodities
-                Object.entries(commodities).forEach(([name, symbol]) => {
-                    let commodityData = data.find(item => item.symbol.toLowerCase().includes(symbol.toLowerCase()));
-                    prices[name] = commodityData ? commodityData.close : 0; // Usa o último preço disponível
-                });
 
                 console.log("Preços das commodities:", prices);
 
@@ -146,10 +144,6 @@
 
         });
     </script>
-
-</body>
-</html>
-
 
 </body>
 </html>
